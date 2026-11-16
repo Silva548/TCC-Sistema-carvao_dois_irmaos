@@ -1,0 +1,29 @@
+<div class="cartao-form">
+    <img src="<%= empresa.logo %>" alt="Logomarca <%= empresa.nome %>" class="logo logo-form">
+    <h1>Entrar</h1>
+
+    <% if (erro) { %>
+        <div class="alert alert-danger"><%= erro %></div>
+    <% } %>
+
+    <form action="/login" method="POST">
+        <%- include('partials/csrf') %>
+        <input type="hidden" name="next" value="<%= proximo %>">
+        <div class="form-group">
+            <label for="username">Usuário</label>
+            <input type="text" class="form-control" id="username" name="username" required autofocus autocomplete="username">
+        </div>
+        <div class="form-group">
+            <label for="password">Senha</label>
+            <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+    </form>
+
+    <%# O cadastro é a outra metade desta tela. Sem este link a única forma de
+        criar conta era pedir ao admin, que é exatamente o que a tela de login
+        sozinha não permite. %>
+    <p class="text-center mt-3 mb-0">
+        Não tem conta? <a href="/registrar">Criar conta</a>
+    </p>
+</div>

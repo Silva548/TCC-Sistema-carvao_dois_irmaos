@@ -1,0 +1,47 @@
+<footer class="rodape">
+    <div class="rodape-grade">
+        <div class="rodape-bloco">
+            <img src="<%= empresa.logo %>" alt="Logomarca <%= empresa.nome %>" class="logo logo-rodape">
+            <strong class="rodape-titulo"><%= empresa.nome %></strong>
+            <p class="rodape-texto"><%= empresa.slogan %></p>
+            <p class="rodape-texto">
+                <%= enderecoLinha() %>
+            </p>
+        </div>
+
+        <div class="rodape-bloco">
+            <strong class="rodape-titulo">Contato</strong>
+            <p class="rodape-texto">
+                <a href="https://wa.me/<%= empresa.contato.telefoneLink %>"
+                    class="rodape-link" target="_blank" rel="noopener noreferrer">
+                    <%= empresa.contato.telefone %>
+                </a>
+                <br>
+                <a href="mailto:<%= empresa.contato.email %>" class="rodape-link">
+                    <%= empresa.contato.email %>
+                </a>
+            </p>
+        </div>
+
+        <div class="rodape-bloco">
+            <strong class="rodape-titulo">Onde estamos</strong>
+            <p class="rodape-texto">
+                <%# Link de mapa, não embed. Um iframe do Google Maps puxaria um
+                    script de terceiro, exigiria chave de API e acrescentaria
+                    duas origens à CSP para mostrar um mapa que o celular do
+                    cliente já abre melhor pelo app. %>
+                <a href="<%= empresa.mapaUrl %>" class="rodape-link" target="_blank"
+                    rel="noopener noreferrer">Ver no Google Maps</a>
+            </p>
+            <p class="rodape-texto rodape-horario">
+                <strong>Seg a Sex</strong> 7h às 11h e 13h às 17h<br>
+                <strong>Sábado</strong> 7h às 12h<br>
+                <strong>Domingo</strong> Fechado
+            </p>
+        </div>
+    </div>
+
+    <div class="rodape-base">
+        <span>&copy; <%= new Date().getFullYear() %> <%= empresa.nome %></span>
+    </div>
+</footer>

@@ -1,0 +1,37 @@
+<h1>Cadastrar novo usuário</h1>
+
+<% if (erro) { %>
+    <div class="alert alert-danger"><%= erro %></div>
+<% } %>
+
+<form action="/users" method="POST">
+    <%- include('../partials/csrf') %>
+    <div class="form-group">
+        <label for="username">Usuário</label>
+        <input type="text" class="form-control" id="username" name="username" value="<%= submetido && submetido.username ? submetido.username : '' %>" maxlength="100" required autocomplete="off">
+    </div>
+    <div class="form-group">
+        <label for="password">Senha (mínimo 8 caracteres)</label>
+        <input type="password" class="form-control" id="password" name="password" minlength="8" required autocomplete="new-password">
+    </div>
+    <div class="form-group">
+        <label for="role">Perfil</label>
+        <select class="form-control" id="role" name="role">
+            <option value="user" <%= !submetido || submetido.role !== 'admin' ? 'selected' : '' %>>User</option>
+            <option value="admin" <%= submetido && submetido.role === 'admin' ? 'selected' : '' %>>Admin</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="cliente_id">Cliente vinculado</label>
+        <%# Obrigatório para o perfil User: é o vínculo que limita a conta aos
+            próprios pedidos. Para Admin é ignorado — administrador não é cliente. %>
+        <select class="form-control" id="cliente_id" name="cliente_id">
+            <option value="">— Selecione (obrigatório para User) —</option>
+            <% clientes.forEach(cliente => { %>
+                <option value="<%= cliente.id %>" <%= submetido && String(submetido.cliente_id) === String(cliente.id) ? 'selected' : '' %>><%= cliente.nome %></option>
+            <% }) %>
+        </select>
+        <small class="form-text text-muted">Só o perfil User usa este campo. Administradores têm acesso total e não representam um cliente.</small>
+    </div>
+    <button type="submit" class="btn btn-primary">Cadastrar</button>
+</form>

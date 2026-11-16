@@ -1,0 +1,67 @@
+<%
+    const { moeda } = formatadores;
+    const categoria = produto.Categoria ? produto.Categoria.nome : 'Sem categoria';
+    // Estoque 0 não esconde o card: mostra esgotado. Esconder foi o que fez a
+    // bolsa de 5kg premium parecer não existir para o cliente (homeController).
+    const esgotado = Number(produto.estoque) < 1;
+    // Um seletor que pode ir só até 1 não ajuda ninguém; nesses casos o botão
+    // simples é mais honesto do que um "-" que não faz nada.
+    const permiteVarias = Number(produto.estoque) > 1;
+%>
+<div class="col-md-6 col-lg-4 mb-4">
+    <div class="card produto-card h-100 <%= esgotado ? 'produto-card-esgotado' : '' %>">
+        <% if (produto.imagem) { %>
+            <img src="<%= produto.imagem %>" class="card-img-top produto-img" alt="Imagem de <%= produto.nome %>" loading="lazy">
+        <% } else { %>
+            <div class="produto-img produto-img-vazia d-flex align-items-center justify-content-center">
+                <span class="text-muted">Sem foto</span>
+            </div>
+        <% } %>
+        <div class="card-body produto-corpo d-flex flex-column">
+            <h5 class="card-title mb-1"><%= produto.nome %></h5>
+            <p class="text-muted small mb-2"><%= categoria %></p>
+
+            <% if (esgotado) { %>
+                <span class="badge selo-esgotado mb-2 align-self-start">Esgotado</span>
+            <% } %>
+
+            <p class="card-text mb-2 produto-precos">
+                <strong>Entrega:</strong> <%= moeda(produto.preco_entrega) %><br>
+                <strong>Retirada:</strong> <%= moeda(produto.preco_retirada) %>
+            </p>
+            <p class="text-muted small">
+                Estoque: <%= produto.estoque %><% if (produto.embalagem) { %> · <%= produto.embalagem %><% } %>
+            </p>
+
+            <%# Os data-* alimentam carrinho.js. `data-estoque` é o teto real do
+                seletor: é lido de novo no servidor ao fechar o pedido, então o
+                valor daqui é só para a experiência. %>
+            <div class="mt-auto produto-acoes">
+                <% if (!esgotado) { %>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="seletor-qtd" data-seletor-qtd>
+                            <button type="button" class="btn-qtd-menos" aria-label="Diminuir quantidade" <%= permiteVarias ? '' : 'disabled' %>>&#8722;</button>
+                            <input type="number" value="1" min="1" max="<%= produto.estoque %>"
+                                class="qtd-input"
+                                aria-label="Quantidade de <%= produto.nome %>">
+                            <button type="button" class="btn-qtd-mais" aria-label="Aumentar quantidade">+</button>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm btn-add-carrinho"
+                            data-produto-id="<%= produto.id %>"
+                            data-produto-nome="<%= produto.nome %>"
+                            data-preco-entrega="<%= produto.preco_entrega %>"
+                            data-preco-retirada="<%= produto.preco_retirada %>"
+                            data-estoque="<%= produto.estoque %>">
+                            Adicionar
+                        </button>
+                    </div>
+                <% } %>
+
+                <%# "Ver detalhes" é separado do botão de adicionar de propósito:
+                    clicar por curiosidade no nome do produto não deve colocar
+                    nada no carrinho. %>
+                <a href="/catalogo/<%= produto.id %>" class="link-detalhe d-inline-block mt-2">Ver detalhes</a>
+            </div>
+        </div>
+    </div>
+</div>

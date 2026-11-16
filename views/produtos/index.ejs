@@ -1,0 +1,98 @@
+<%
+    const { moeda, rotuloEmbalagem } = formatadores;
+%>
+
+<h1>Lista de produtos</h1>
+
+<%# Mensagem de erro trazida pelo controller após uma recusa (ex.: exclusão
+    bloqueada por FK). Vem na query porque o app não tem sessão de flash. %>
+<% if (typeof erro !== 'undefined' && erro) { %>
+    <div class="alert alert-danger"><%= erro %></div>
+<% } %>
+
+<a href="/produtos/new" class="btn btn-success mb-3">Novo Produto</a>
+
+<form method="GET" action="/produtos" class="form-row align-items-end mb-3">
+    <div class="form-group col-md-4">
+        <label for="categoria_id">Categoria</label>
+        <select class="form-control" id="categoria_id" name="categoria_id">
+            <option value="">Todas</option>
+            <% categorias.forEach(categoria => { %>
+                <option value="<%= categoria.id %>" <%= String(categoriaFiltro) === String(categoria.id) ? 'selected' : '' %>><%= categoria.nome %></option>
+            <% }) %>
+        </select>
+    </div>
+
+    <%# Filtros por peso e embalagem, definidos em produtoSequelizeController %>
+    <div class="form-group col-md-3">
+        <label for="peso_kg">Peso</label>
+        <select class="form-control" id="peso_kg" name="peso_kg">
+            <option value="">Todos</option>
+            <% pesosDisponiveis.forEach(peso => { %>
+                <option value="<%= peso %>" <%= String(pesoFiltro) === String(peso) ? 'selected' : '' %>><%= peso %> kg</option>
+            <% }) %>
+        </select>
+    </div>
+
+    <div class="form-group col-md-3">
+        <label for="embalagem">Embalagem</label>
+        <select class="form-control" id="embalagem" name="embalagem">
+            <option value="">Todas</option>
+            <% embalagens.forEach(embalagem => { %>
+                <option value="<%= embalagem %>" <%= embalagemFiltro === embalagem ? 'selected' : '' %>><%= rotuloEmbalagem(embalagem) %></option>
+            <% }) %>
+        </select>
+    </div>
+
+    <div class="form-group col-md-2">
+        <button type="submit" class="btn btn-secondary">Filtrar</button>
+        <% if (categoriaFiltro || pesoFiltro || embalagemFiltro) { %>
+            <a href="/produtos" class="btn btn-link">Limpar</a>
+        <% } %>
+    </div>
+</form>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Categoria</th>
+            <th>Embalagem</th>
+            <th>Peso (kg)</th>
+            <th>Entrega (R$)</th>
+            <th>Retirada (R$)</th>
+            <th>Estoque</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        <% produtos.forEach(produto => { %>
+            <tr>
+                <td><%= produto.id %></td>
+                <td>
+                    <% if (produto.imagem) { %>
+                        <img src="<%= produto.imagem %>" alt="Foto de <%= produto.nome %>" class="rounded mr-2" style="width: 48px; height: 48px; object-fit: cover;">
+                    <% } %>
+                    <%= produto.nome %>
+                </td>
+                <td><%= produto.Categoria ? produto.Categoria.nome : 'Sem categoria' %></td>
+                <td><%= rotuloEmbalagem(produto.embalagem) %></td>
+                <td><%= produto.peso_kg %></td>
+                <td><%= moeda(produto.preco_entrega) %></td>
+                <td><%= moeda(produto.preco_retirada) %></td>
+                <td><%= produto.estoque %></td>
+                <td>
+                    <a href="/produtos/<%= produto.id %>" class="btn btn-primary">View</a>
+                    <a href="/produtos/<%= produto.id %>/edit" class="btn btn-warning">Edit</a>
+                    <form action="/produtos/<%= produto.id %>?_method=DELETE" method="POST" style="display: inline;">
+                        <%- include('../partials/csrf') %>
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        <% }) %>
+    </tbody>
+</table>
+
+<%- include("../partials/pagination", { caminhoBase: "/produtos", queryExtra: queryExtra }) %>

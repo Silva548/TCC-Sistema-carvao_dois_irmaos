@@ -1,0 +1,90 @@
+<%
+    // Mesma convenção da home: os dados do cliente pré-preenchem o carrinho.
+    const valorContato = (campo) => (cliente && cliente[campo] ? cliente[campo] : '');
+    const esgotado = Number(produto.estoque) < 1;
+    const categoria = produto.Categoria ? produto.Categoria.nome : 'Sem categoria';
+%>
+
+<nav aria-label="Voltar ao catálogo">
+    <a href="/" class="link-detalhe">&larr; Voltar para o catálogo</a>
+</nav>
+
+<div class="produto-detalhe my-3">
+    <div class="row">
+        <div class="col-md-6 mb-4 mb-md-0">
+            <% if (produto.imagem) { %>
+                <img src="<%= produto.imagem %>" class="produto-img w-100" alt="Imagem de <%= produto.nome %>">
+            <% } else { %>
+                <div class="produto-img produto-img-vazia d-flex align-items-center justify-content-center">
+                    <span class="text-muted">Sem foto</span>
+                </div>
+            <% } %>
+        </div>
+
+        <div class="col-md-6">
+            <h1><%= produto.nome %></h1>
+            <p class="text-muted mb-3"><%= categoria %></p>
+
+            <% if (esgotado) { %>
+                <span class="badge selo-esgotado mb-2">Esgotado</span>
+            <% } %>
+
+            <div class="preco-destaque mb-1">
+                <%= formatadores.moeda(produto.preco_entrega) %>
+                <small>entrega</small>
+            </div>
+            <p class="text-muted mb-3">
+                Retirada na empresa por <%= formatadores.moeda(produto.preco_retirada) %>
+            </p>
+
+            <% if (produto.descricao) { %>
+                <p class="mb-3"><%= produto.descricao %></p>
+            <% } %>
+
+            <ul class="spec-lista mb-4">
+                <li>
+                    <span class="spec-rotulo">Peso</span>
+                    <span class="spec-valor"><%= formatadores.numero(produto.peso_kg, 1).replace('.', ',') %> kg</span>
+                </li>
+                <li>
+                    <span class="spec-rotulo">Embalagem</span>
+                    <span class="spec-valor"><%= formatadores.rotuloEmbalagem(produto.embalagem) %></span>
+                </li>
+                <li>
+                    <span class="spec-rotulo">Em estoque</span>
+                    <span class="spec-valor"><%= produto.estoque %> <%= Number(produto.estoque) === 1 ? 'unidade' : 'unidades' %></span>
+                </li>
+            </ul>
+
+            <%# O seletor aqui é maior que o do card porque esta é a tela onde o
+                cliente realmente escolhe. Mesmo teto: o estoque. %>
+            <div class="d-flex align-items-center flex-wrap">
+                <div class="seletor-qtd mr-3" data-seletor-qtd>
+                    <button type="button" class="btn-qtd-menos" aria-label="Diminuir quantidade" <%= Number(produto.estoque) > 1 ? '' : 'disabled' %>>&#8722;</button>
+                    <input type="number" value="1" min="1" max="<%= produto.estoque %>"
+                        class="qtd-input"
+                        aria-label="Quantidade de <%= produto.nome %>">
+                    <button type="button" class="btn-qtd-mais" aria-label="Aumentar quantidade">+</button>
+                </div>
+
+                <button type="button" class="btn btn-primary btn-add-carrinho"
+                    data-produto-id="<%= produto.id %>"
+                    data-produto-nome="<%= produto.nome %>"
+                    data-preco-entrega="<%= produto.preco_entrega %>"
+                    data-preco-retirada="<%= produto.preco_retirada %>"
+                    data-estoque="<%= produto.estoque %>"
+                    <%= esgotado ? 'disabled' : '' %>>
+                    <% if (esgotado) { %>
+                        Produto esgotado
+                    <% } else { %>
+                        Adicionar ao carrinho
+                    <% } %>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<% if (carrinho) { %>
+    <%- include('../partials/carrinho', { formasPagamento, tiposEntrega, valorContato, csrfToken }) %>
+<% } %>

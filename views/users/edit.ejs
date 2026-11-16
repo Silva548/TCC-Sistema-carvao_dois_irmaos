@@ -1,0 +1,44 @@
+<h1>Editar usuário</h1>
+
+<% if (erro) { %>
+    <div class="alert alert-danger"><%= erro %></div>
+<% } %>
+
+<form action="/users/<%= user.id %>?_method=PUT" method="POST">
+    <%- include('../partials/csrf') %>
+    <%
+        const usernameAtual = submetido && submetido.username ? submetido.username : (user.username || '');
+        const roleAtual = submetido && submetido.role ? submetido.role : user.role;
+        const clienteAtual = submetido && submetido.cliente_id !== undefined && submetido.cliente_id !== null
+            ? String(submetido.cliente_id)
+            : (user.cliente_id !== null && user.cliente_id !== undefined ? String(user.cliente_id) : '');
+    %>
+    <div class="form-group">
+        <label for="username">Usuário</label>
+        <input type="text" class="form-control" id="username" name="username" value="<%= usernameAtual %>" maxlength="100" required autocomplete="off">
+    </div>
+    <div class="form-group">
+        <label for="password">Nova senha (deixe em branco para manter a atual; mínimo 8 caracteres)</label>
+        <input type="password" class="form-control" id="password" name="password" minlength="8" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+        <label for="role">Perfil</label>
+        <select class="form-control" id="role" name="role">
+            <option value="user" <%= roleAtual === 'user' ? 'selected' : '' %>>User</option>
+            <option value="admin" <%= roleAtual === 'admin' ? 'selected' : '' %>>Admin</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="cliente_id">Cliente vinculado</label>
+        <%# Obrigatório para o perfil User; ignorado para Admin (que passa a
+            ficar com cliente_id nulo ao salvar). %>
+        <select class="form-control" id="cliente_id" name="cliente_id">
+            <option value="">— Selecione (obrigatório para User) —</option>
+            <% clientes.forEach(cliente => { %>
+                <option value="<%= cliente.id %>" <%= clienteAtual === String(cliente.id) ? 'selected' : '' %>><%= cliente.nome %></option>
+            <% }) %>
+        </select>
+        <small class="form-text text-muted">Só o perfil User usa este campo. Ao tornar a conta Admin, o vínculo é removido.</small>
+    </div>
+    <button type="submit" class="btn btn-warning">Salvar</button>
+</form>

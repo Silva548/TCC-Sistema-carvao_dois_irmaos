@@ -1,0 +1,50 @@
+<h1>Meus dados</h1>
+
+<% if (erro) { %>
+    <div class="alert alert-danger"><%= erro %></div>
+<% } %>
+
+<% if (typeof salvo !== 'undefined' && salvo) { %>
+    <div class="alert alert-success">Dados atualizados com sucesso.</div>
+<% } %>
+
+<% if (!cliente) { %>
+    <div class="alert alert-warning">
+        Sua conta ainda não está vinculada a um cliente, então não há dados para editar.
+        Procure o administrador.
+    </div>
+    <a href="/" class="btn btn-link">← Voltar</a>
+<% } else { %>
+    <p class="text-muted">
+        Nome, e-mail e WhatsApp são usados nos pedidos para a loja falar com você.
+        CPF/CNPJ e tipo de cadastro são alterados apenas pelo administrador.
+    </p>
+
+    <form action="/meus-dados?_method=PUT" method="POST">
+        <%- include('../partials/csrf') %>
+
+        <div class="form-group">
+            <label for="nome">Nome</label>
+            <input type="text" class="form-control" id="nome" name="nome" maxlength="255" required
+                value="<%= submetido && submetido.nome !== undefined ? submetido.nome : (cliente.nome || '') %>">
+        </div>
+
+        <div class="form-group">
+            <label for="email">E-mail</label>
+            <input type="email" class="form-control" id="email" name="email" maxlength="255" required
+                value="<%= submetido && submetido.email !== undefined ? submetido.email : (cliente.email || '') %>">
+        </div>
+
+        <div class="form-group">
+            <label for="telefone">WhatsApp</label>
+            <input type="tel" class="form-control" id="telefone" name="telefone" maxlength="20"
+                value="<%= submetido && submetido.telefone !== undefined ? submetido.telefone : (cliente.telefone || '') %>">
+            <small class="form-text text-muted">
+                Opcional no cadastro, mas todo pedido exige um WhatsApp de contato.
+            </small>
+        </div>
+
+        <button type="submit" class="btn btn-warning">Salvar</button>
+        <a href="/" class="btn btn-link">Cancelar</a>
+    </form>
+<% } %>

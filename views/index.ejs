@@ -1,0 +1,88 @@
+<%
+    // A home é pública, mas o conteúdo muda por papel. `ehAdmin` vem do
+    // homeController, que também decide carregar catálogo/pedidos do user.
+    const admin = typeof ehAdmin !== 'undefined' && ehAdmin;
+    const logado = currentUser;
+    const contato = (typeof cliente !== 'undefined' && cliente) ? cliente : null;
+    const valorContato = (campo) => (contato && contato[campo] ? contato[campo] : '');
+%>
+<div class="jumbotron text-center">
+    <h1>Bem-vindo à <%= empresa.nomeCurto %></h1>
+    <p class="lead">
+        <% if (admin) { %>
+            Gerencie seus clientes, produtos e pedidos sem esforço.
+        <% } else if (logado) { %>
+            Escolha seus produtos, monte o carrinho e acompanhe seus pedidos.
+        <% } else { %>
+            Faça seus pedidos e acompanhe o andamento deles.
+        <% } %>
+    </p>
+</div>
+
+<% if (admin) { %>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="feature-card">
+                <h3>Clientes</h3>
+                <p>Cadastre e gerencie os clientes da loja, pessoas físicas e empresas.</p>
+                <a href="/clientes" class="btn btn-primary">Ir para clientes</a>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <h3>Produtos</h3>
+                <p>Acompanhe seus produtos e o estoque perfeitamente.</p>
+                <a href="/produtos" class="btn btn-primary">Ir para produtos</a>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <h3>Pedidos</h3>
+                <p>Registre pedidos, acompanhe o status e consulte o histórico.</p>
+                <a href="/pedidos" class="btn btn-primary">Ir para pedidos</a>
+            </div>
+        </div>
+    </div>
+<% } else if (!logado) { %>
+    <div class="text-center">
+        <a href="/login" class="btn btn-primary btn-lg">Entrar</a>
+        <a href="/registrar" class="btn btn-outline-primary btn-lg">Criar conta</a>
+    </div>
+<% } else { %>
+    <ul class="nav nav-tabs" id="abas-home" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="aba-catalogo" data-toggle="tab" href="#catalogo" role="tab">Catálogo</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="aba-pedidos" data-toggle="tab" href="#meus-pedidos" role="tab">Meus pedidos</a>
+        </li>
+    </ul>
+
+    <div class="tab-content pt-4">
+        <div class="tab-pane fade show active" id="catalogo" role="tabpanel">
+<% if (!produtos.length) { %>
+            <div class="alert alert-info">Nenhum produto cadastrado ainda.</div>
+        <% } else { %>
+            <div class="row">
+                <% produtos.forEach(produto => { %>
+                    <%- include('partials/card-produto', { produto }) %>
+                <% }) %>
+            </div>
+        <% } %>
+        </div>
+
+        <div class="tab-pane fade" id="meus-pedidos" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Pedidos recentes</h2>
+                <a href="/pedidos" class="btn btn-sm btn-outline-primary">Ver todos</a>
+            </div>
+            <% if (!pedidos.length) { %>
+                <div class="alert alert-info">Você ainda não fez pedidos.</div>
+            <% } else { %>
+                <%- include('partials/tabela-pedidos', { pedidos, ehAdmin: false }) %>
+            <% } %>
+        </div>
+    </div>
+
+    <%- include('partials/carrinho', { formasPagamento, tiposEntrega, valorContato, csrfToken }) %>
+<% } %>

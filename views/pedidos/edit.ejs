@@ -1,0 +1,155 @@
+<%
+    const { moeda, rotuloPagamento, rotuloTipoEntrega } = formatadores;
+    const preenchidos = Array.isArray(itensPreenchidos) ? itensPreenchidos : [];
+    const escolhidos = (indice) => (preenchidos[indice] ? String(preenchidos[indice].produto_id) : '');
+    const quantidades = (indice) => (preenchidos[indice] ? String(preenchidos[indice].quantidade) : '');
+    // Um pedido pode ter mais itens do que as linhas padrão do formulário;
+    // nesse caso abre o número de linhas necessário para não perder nenhum.
+    const totalLinhas = Math.max(linhasItem, preenchidos.length);
+    const clienteDaConta = clienteFixo && clientes.length ? clientes[0] : null;
+    const clienteAtual = submetido && submetido.cliente_id !== undefined && submetido.cliente_id !== null
+        ? String(submetido.cliente_id)
+        : '';
+    // Contato pré-preenchido pelo snapshot do pedido (ou cadastro do cliente);
+    // ao reenviar com erro, prevalece o que foi digitado.
+    const contatoPadraoLocal = (typeof contatoPadrao !== 'undefined' && contatoPadrao) ? contatoPadrao : {};
+    const valorContato = (campo) => (submetido && submetido[campo] !== undefined
+        ? submetido[campo]
+        : (contatoPadraoLocal[campo] || ''));
+%>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Editar pedido #<%= pedido.id %></h1>
+    <a href="/pedidos/<%= pedido.id %>" class="btn btn-link">← Voltar</a>
+</div>
+
+<% if (typeof erro !== 'undefined' && erro) { %>
+    <div class="alert alert-danger"><%= erro %></div>
+<% } %>
+
+<div class="alert alert-info">
+    Trocar os itens, a forma de pagamento ou a modalidade recalcula o total e
+    revalida o estoque. O preço unitário passa a ser o do produto na modalidade
+    escolhida.
+</div>
+
+<form action="/pedidos/<%= pedido.id %>?_method=PUT" method="POST">
+    <%- include('../partials/csrf') %>
+
+    <div class="form-row">
+        <div class="form-group col-md-8">
+            <label for="cliente_id">Cliente</label>
+            <% if (clienteFixo) { %>
+                <input type="text" class="form-control" id="cliente_id" value="<%= clienteDaConta ? clienteDaConta.nome : 'Conta sem cliente vinculado' %>" disabled>
+            <% } else { %>
+                <select class="form-control" id="cliente_id" name="cliente_id" required>
+                    <option value="">Selecione um cliente</option>
+                    <% clientes.forEach(cliente => { %>
+                        <option value="<%= cliente.id %>" <%= clienteAtual === String(cliente.id) ? 'selected' : '' %>><%= cliente.nome %></option>
+                    <% }) %>
+                </select>
+            <% } %>
+            <small class="form-text text-muted">O cliente do pedido não muda na edição; para trocar, crie outro pedido.</small>
+        </div>
+
+        <div class="form-group col-md-4">
+            <label for="forma_pagamento">Forma de pagamento</label>
+            <select class="form-control" id="forma_pagamento" name="forma_pagamento" required>
+                <% formasPagamento.forEach(forma => { %>
+                    <option value="<%= forma %>" <%= String(submetido && submetido.forma_pagamento) === forma ? 'selected' : '' %>><%= rotuloPagamento(forma) %></option>
+                <% }) %>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group col-md-4">
+            <label for="tipo_entrega">Entrega ou retirada</label>
+            <select class="form-control" id="tipo_entrega" name="tipo_entrega" required>
+                <% const tipoAtual = String(submetido && submetido.tipo_entrega ? submetido.tipo_entrega : 'entrega'); %>
+                <% tiposEntrega.forEach(tipo => { %>
+                    <option value="<%= tipo %>" <%= tipoAtual === tipo ? 'selected' : '' %>><%= rotuloTipoEntrega(tipo) %></option>
+                <% }) %>
+            </select>
+            <small class="form-text text-muted">Preços diferentes para entrega e retirada.</small>
+        </div>
+    </div>
+
+    <% if (clienteFixo) { %>
+        <h2 class="h5 mt-4">Contato para o pedido</h2>
+        <p class="text-muted small">
+            Estes dados acompanham o pedido para a loja falar com você.
+            Você pode atualizá-los em <a href="/meus-dados">Meus dados</a>.
+        </p>
+        <div class="form-row">
+            <div class="form-group col-md-5">
+                <label for="contato_nome">Nome</label>
+                <input type="text" class="form-control" id="contato_nome" name="contato_nome"
+                    maxlength="255" required value="<%= valorContato('contato_nome') %>">
+            </div>
+            <div class="form-group col-md-4">
+                <label for="contato_email">E-mail</label>
+                <input type="email" class="form-control" id="contato_email" name="contato_email"
+                    maxlength="255" required value="<%= valorContato('contato_email') %>">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="contato_telefone">WhatsApp</label>
+                <input type="tel" class="form-control" id="contato_telefone" name="contato_telefone"
+                    maxlength="20" required value="<%= valorContato('contato_telefone') %>">
+            </div>
+        </div>
+    <% } %>
+
+    <%- include('_endereco', { endereco: enderecoDoPedido }) %>
+
+    <h2 class="h5 mt-4">Itens</h2>
+    <p class="text-muted small">
+        Preencha produto e quantidade na mesma linha. Linhas em branco são
+        ignoradas. <%= totalLinhas %> linhas disponíveis.
+    </p>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Produto</th>
+                    <th style="width: 140px;">Quantidade</th>
+                    <th>Preço unitário</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% for (let i = 0; i < totalLinhas; i++) { %>
+                    <tr>
+                        <td>
+                            <select class="form-control form-control-sm" name="item_produto_id[]" aria-label="Produto da linha <%= i + 1 %>">
+                                <option value="">—</option>
+                                <% produtos.forEach(produto => { %>
+                                    <option value="<%= produto.id %>" <%= escolhidos(i) === String(produto.id) ? 'selected' : '' %>>
+                                        <%= produto.nome %> — entrega <%= moeda(produto.preco_entrega) %> / retirada <%= moeda(produto.preco_retirada) %> (estoque <%= produto.estoque %>)
+                                    </option>
+                                <% }) %>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="number" min="1" step="1" class="form-control form-control-sm"
+                                name="item_quantidade[]" value="<%= quantidades(i) %>"
+                                aria-label="Quantidade da linha <%= i + 1 %>">
+                        </td>
+                        <td class="text-muted small align-middle">
+                            <% if (preenchidos[i]) { %>
+                                O total é recalculado no servidor, a partir do preço atual do produto.
+                            <% } else { %>
+                                &nbsp;
+                            <% } %>
+                        </td>
+                    </tr>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+
+    <button type="submit" class="btn btn-warning" <%= (!produtos.length) ? 'disabled' : '' %>>
+        Salvar alterações
+    </button>
+    <a href="/pedidos/<%= pedido.id %>" class="btn btn-link">Cancelar</a>
+</form>

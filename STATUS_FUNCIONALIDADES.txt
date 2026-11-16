@@ -1,0 +1,443 @@
+STATUS DAS FUNCIONALIDADES — SISTEMA DE VENDAS CARVÃO DOIS IRMÃOS
+Data da verificação: 29/10/2026
+Base analisada: código em /home/riquelme/Documentos/TCC (branch main)
+
+COMO ESTE DOCUMENTO FOI VERIFICADO
+- Leitura das rotas, controllers, services, middlewares, models, migrations,
+  views, seed e testes.
+- Execução de "npm run lint": sem erros.
+- Execução de "npm run lint:views": sem erros.
+- Conexão com o PostgreSQL local: OK.
+- Execução de "npm test": 274 testes, 274 aprovados, 0 falhas, 0 ignorados.
+- Não foi feito teste manual navegando na interface nesta rodada; a cobertura
+  abaixo vem do código e da suíte de integração, que sobe o app real e faz
+  requisições HTTP.
+
+RESUMO GERAL
+O núcleo do sistema está implementado e funcionando: autenticação, cadastro,
+permissões, CRUDs administrativos, catálogo, carrinho, pedidos (HTML e JSON),
+relatório de vendas em JSON, perfil do cliente, páginas públicas, segurança e
+qualidade. O que falta para o sistema ser considerado "completo" está
+principalmente em recursos de operação da loja (pagamento, frete, e-mail,
+relatórios visuais, documentação de API e deploy), não em falhas do que já
+existe.
+
+======================================================================
+1. FUNCIONALIDADES QUE ESTÃO FUNCIONANDO
+======================================================================
+
+1.1 AUTENTICAÇÃO E SESSÃO
+- Login em /login com usuário e senha.
+- Logout em POST /logout, com destruição da sessão e limpeza do cookie.
+- Cadastro público de cliente em /registrar, criando cliente e usuário
+  vinculado na mesma transação.
+- Senhas com hash bcrypt custo 12 e mínimo de 8 caracteres.
+- Comparação de senha em tempo constante e hash fictício para usuário
+  inexistente (evita descobrir usuários pelo tempo de resposta).
+- Sessão regenerada após login (proteção contra session fixation).
+- Redirecionamento pós-login apenas para caminho interno seguro.
+- Sessões persistidas no PostgreSQL via connect-pg-simple.
+- Cookie httpOnly, sameSite=lax, secure em produção e validade de 2 horas.
+- Identidade reidratada do banco a cada requisição: conta removida derruba a
+  sessão e mudança de papel/vínculo vale imediatamente.
+- Limite de login por IP e por conta, com contadores persistidos no banco.
+- Conta bloqueada responde com tempo restante e não gasta bcrypt.
+- Produção recusa iniciar com admin usando senha padrão conhecida.
+
+1.2 PERFIS E PERMISSÕES
+- Visitante vê apenas home pública, "Onde estamos", login e cadastro.
+- Cliente comum (role user) vê catálogo, carrinho, próprios pedidos e
+  /meus-dados.
+- Administrador (role admin) gerencia clientes, categorias, produtos,
+  usuários e todos os pedidos, além de consultar o relatório de vendas.
+- Rotas administrativas protegidas por requireAuth + requireRole('admin').
+- Cliente não acessa dados de outro cliente; verificação é feita no servidor.
+- Sistema impede rebaixar ou excluir o último administrador.
+- Admin não pode excluir a própria conta logada.
+
+1.3 CLIENTES (ADMIN)
+- Listagem com paginação.
+- Busca por nome via JSON (/clientes/search).
+- Cadastro, visualização, edição e exclusão.
+- Validação de nome, e-mail, documento, telefone e tipo (B2C/B2B).
+- Documento normalizado para dígitos e validado como CPF ou CNPJ.
+- E-mail, documento e username únicos.
+- Exclusão bloqueada quando há pedidos ou usuários vinculados, com mensagem
+  amigável e tratamento de corrida.
+- Limites de tamanho validados antes do banco.
+
+1.4 CATEGORIAS (ADMIN)
+- Listagem com paginação.
+- Cadastro, visualização, edição e exclusão.
+- Nome obrigatório, único e com limite de tamanho.
+- Exclusão bloqueada quando existem produtos vinculados.
+
+1.5 PRODUTOS (ADMIN)
+- Listagem com paginação.
+- Filtros por categoria, embalagem (premium/basica) e peso (5 kg/3 kg),
+  preservados na troca de página.
+- Cadastro, visualização, edição e exclusão.
+- Dois preços por produto: entrega e retirada.
+- Controle de estoque com validação de inteiro não negativo e CHECK no banco.
+- Categoria opcional, com erro amigável para categoria inexistente.
+- Upload de imagem JPG, PNG e WEBP, até 2 MB, uma por requisição.
+- Validação do conteúdo pela assinatura binária do arquivo.
+- Arquivo mantido em memória até a validação do formulário.
+- Nome do arquivo gerado pelo servidor.
+- Troca de imagem remove a anterior; falha no update remove a nova.
+- Exclusão bloqueada para produto com pedidos e remove a imagem só após o
+  sucesso.
+
+1.6 USUÁRIOS (ADMIN)
+- Listagem com paginação.
+- Busca por username via JSON (/users/search).
+- Cadastro, visualização, edição e exclusão.
+- Papéis admin e user, com vínculo obrigatório a cliente para role user.
+- Admin nunca possui vínculo com cliente.
+- Senha só é alterada quando uma nova é informada.
+- Senha nunca é devolvida ao formulário em caso de erro.
+- Username único e senha mínima de 8 caracteres.
+- Atualização em transação com lock.
+- Proteção do último admin e da própria conta.
+
+1.7 CATÁLOGO E CARRINHO (CLIENTE)
+- Home diferente por perfil: visitante, admin e cliente.
+- Catálogo com todos os produtos, inclusive esgotados.
+- Produto esgotado aparece marcado e com botão de compra desabilitado.
+- Ficha do produto em /catalogo/:id com imagem, categoria, preços, descrição,
+  peso, embalagem e estoque.
+- Carrinho em localStorage (chave cdi_carrinho).
+- Adicionar, somar, alterar, remover e limpar itens.
+- Quantidade digitável, arredondada e limitada ao estoque.
+- Total no navegador é apenas visual; servidor recalcula tudo.
+- Finalização com forma de pagamento, entrega/retirada, endereço e contato.
+- Endereço aparece somente na modalidade entrega.
+- Preenchimento de endereço por CEP via ViaCEP no navegador.
+- Envio do pedido por POST JSON com token CSRF.
+- Confirmação visual ao adicionar item.
+
+1.8 PEDIDOS
+- Listagem em /pedidos para admin (todos) e cliente (apenas os próprios).
+- Filtro por status e paginação.
+- Criação pelo formulário HTML de 6 linhas, sem exigir JavaScript.
+- Criação pela API JSON (POST /pedidos) retornando 201.
+- Mesmo produto repetido em várias linhas é somado antes de validar estoque.
+- Validação de cliente, forma de pagamento, tipo de entrega, itens,
+  quantidade, produto e estoque.
+- Total calculado em centavos com o preço da modalidade escolhida.
+- Preço unitário congelado no item do pedido.
+- Estoque decrementado na criação.
+- Operações em transação, com lock pessimista e locks de produto ordenados por
+  id para evitar deadlock.
+- Visualização de pedido com resumo, contato, endereço, status, itens,
+  subtotais e total.
+- Alteração de status apenas pelo admin, com transições válidas.
+- Cancelamento pelo admin sem prazo e pelo cliente dentro de 3 dias, com
+  devolução de estoque.
+- Cancelamento irreversível e sem devolução duplicada de estoque.
+- Edição pelo admin de pedido pendente de qualquer cliente, sem prazo.
+- Edição pelo cliente do próprio pedido pendente dentro de 3 dias.
+- Edição devolve o estoque antigo, valida o novo e recalcula o total.
+- Contato e endereço não reenviados são preservados.
+- Exclusão apenas pelo admin, com devolução de estoque quando o pedido ainda
+  não estava cancelado.
+- Itens removidos em cascata com o pedido.
+- Pedido de outro cliente responde 404 para não revelar existência.
+
+1.9 RELATÓRIO DE VENDAS
+- Rota GET /pedidos/relatorio/vendas somente JSON e somente admin.
+- Filtro opcional por período, com data inicial e final obrigatórias juntas.
+- Intervalo semiaberto (início incluído, fim excluído).
+- Pedidos cancelados ficam fora do resumo e da listagem.
+- Resumo com total de vendas, total de pedidos e valor médio arredondado.
+- Paginação e lista de pedidos com cliente.
+- Agregações calculadas no banco.
+
+1.10 PERFIL DO CLIENTE
+- Edição de nome, e-mail e telefone em /meus-dados.
+- Documento e tipo não são editáveis pelo cliente.
+- Vínculo usuário/cliente vem da sessão, nunca da URL.
+- E-mail validado e único.
+- Admin sem vínculo recebe orientação para procurar administrador.
+- Conta sem vínculo não consegue editar.
+
+1.11 PÁGINAS PÚBLICAS E INTERFACE
+- Home pública com apresentação da loja.
+- Página "Onde estamos" com endereço, mapa, telefone/WhatsApp, e-mail,
+  horários e botão de contato.
+- Dados da empresa centralizados em config/empresa.js.
+- Layout responsivo com Bootstrap 4.
+- Tema claro e escuro com preferência salva no navegador.
+- Navbar e rodapé com contato e endereço.
+- Mensagens de sucesso e erro por query string.
+- Paginação reutilizável com filtros preservados.
+- Páginas de erro 400, 403, 404 e 500.
+- Interface em português do Brasil.
+- Formulário HTML de pedido funciona sem JavaScript.
+
+1.12 SEGURANÇA
+- CSRF em todos os métodos que alteram estado (POST, PUT, PATCH, DELETE).
+- Helmet com CSP restritiva.
+- Recursos de CDN com Subresource Integrity e origem única (cdn.jsdelivr.net).
+- Rate limit global, no login por IP, no login por conta e no cadastro.
+- CORS same-origin por padrão; origens externas só se listadas.
+- Proteção contra open redirect.
+- Upload com validação de MIME, tamanho, assinatura binária e nome gerado.
+- Validação de entrada antes do banco, evitando 500 por tipo ou tamanho.
+- TRUST_PROXY só liga com valor explícito "true".
+- Erros internos não vazam stack para o cliente; requestId identifica o log.
+- Consultas via Sequelize/parâmetros e escape de curingas de LIKE.
+- Templates EJS escapam dados por padrão.
+
+1.13 OPERAÇÃO E QUALIDADE
+- Schema aplicado exclusivamente por migrations (16 migrations).
+- Seed idempotente com dados de demonstração e usuários admin/cliente.
+- Sonda pública /health verifica o banco e responde 200 ou 503.
+- Boot falha cedo se a tabela rate_limit não existir.
+- Encerramento gracioso em SIGTERM/SIGINT.
+- Handlers globais para rejeições e exceções não tratadas.
+- requestId aceito ou gerado por requisição, no header e nos logs.
+- Pool de conexões configurável.
+- Suporte a DATABASE_URL e TLS.
+- Paginação nas listagens relevantes.
+- Testes unitários e de integração com o runner nativo do Node.
+- Banco de teste separado, preparado pelo pretest.
+- CI no GitHub Actions executando lint, lint de views e testes contra
+  PostgreSQL.
+- Código organizado em rotas, controllers, services, models, middleware e
+  utils.
+- Regras de pedido centralizadas em services/pedidoService.js e
+  utils/pedidoRules.js.
+- Autorização centralizada em utils/permissoes.js.
+
+======================================================================
+2. FUNCIONALIDADES QUE FUNCIONAM COM LIMITAÇÕES
+======================================================================
+
+2.1 RELATÓRIO DE VENDAS
+- Funciona apenas como JSON. Não existe tela HTML, exportação CSV/PDF nem
+  gráficos. Para o administrador usar no dia a dia, é necessário consumir a
+  API ou abrir o JSON no navegador.
+
+2.2 CARRINHO
+- Depende de JavaScript e localStorage. Sem JavaScript o cliente não monta
+  carrinho. O admin ainda cria pedidos pelo formulário HTML tradicional.
+
+2.3 CONFIRMAÇÃO DE EXCLUSÃO
+- Não há confirmação em JavaScript antes de excluir/cancelar. A CSP não
+  permite script inline. Os botões são rotulados de forma explícita, mas uma
+  confirmação em duas etapas exigiria JavaScript ou uma tela intermediária.
+
+2.4 LISTAGEM DE PEDIDOS
+- Filtro apenas por status (e cliente_id para admin via API). Não há busca por
+  nome do cliente, número do pedido, período ou forma de pagamento na tela.
+
+2.5 LISTAGEM DE PRODUTOS
+- Filtros apenas por categoria, embalagem e peso. Não há busca por nome nem
+  ordenação configurável.
+
+2.6 CATÁLOGO NA HOME
+- Lista todos os produtos de uma vez, sem paginação nem busca. Funciona para o
+  volume atual, mas pode ficar pesado com muitos produtos.
+
+2.7 ADMIN EM /meus-dados
+- O admin não possui vínculo com cliente, então /meus-dados não edita dados de
+  contato. Ele recebe mensagem orientando procurar administrador. A edição de
+  dados de cliente é feita pelo CRUD de clientes.
+
+2.8 EDIÇÃO DE ITENS DE PEDIDO
+- Só é permitida enquanto o pedido está pendente. Depois de processando,
+  enviado, entregue ou cancelado, nem o admin reescreve os itens.
+
+2.9 PAGAMENTO
+- A forma de pagamento é apenas informativa. Não há cobrança, link de
+  pagamento, conciliação nem confirmação automática.
+
+2.10 FRETE
+- O preço de entrega é fixo por produto. Não há cálculo por distância, CEP,
+  peso total ou região.
+
+2.11 HORÁRIO DE FUNCIONAMENTO
+- É exibido como texto na página "Onde estamos". Não há lógica de loja
+  aberta/fechada nem bloqueio de pedidos fora do horário.
+
+2.12 TEMA E ACESSIBILIDADE
+- Tema claro/escuro funciona, mas não há auditoria formal de acessibilidade
+  (leitores de tela, contraste em todos os componentes, navegação por teclado
+  em todos os fluxos) nem testes automatizados de acessibilidade.
+
+2.13 LOGOMARCA NA HOME
+- No estado atual do diretório de trabalho, a imagem da logomarca foi removida
+  de views/index.ejs (alteração não commitada). O restante da home continua
+  funcionando.
+
+======================================================================
+3. FUNCIONALIDADES NÃO IMPLEMENTADAS
+======================================================================
+
+3.1 RECUPERAÇÃO E TROCA DE SENHA
+- Não existe "esqueci minha senha", envio de link de redefinição nem tela para
+  o usuário trocar a própria senha. A senha só é alterada pelo admin no CRUD de
+  usuários.
+
+3.2 ENVIO DE E-MAIL
+- Não há envio de e-mail de confirmação de cadastro, de pedido, de mudança de
+  status, de recuperação de senha ou de contato. Nenhuma biblioteca de e-mail
+  está instalada.
+
+3.3 VERIFICAÇÃO DE E-MAIL
+- O cadastro valida o formato do e-mail, mas não confirma que a pessoa é dona
+  do endereço (sem token de verificação).
+
+3.4 INTEGRAÇÃO DE PAGAMENTO
+- Não há gateway (Pix automático, cartão, boleto). A forma escolhida não é
+  processada.
+
+3.5 CÁLCULO DE FRETE E RASTREAMENTO
+- Não há cálculo de frete, prazo de entrega, área de cobertura nem rastreio de
+  entrega em tempo real.
+
+3.6 RELATÓRIO EM HTML E EXPORTAÇÃO
+- Não há tela de relatório, exportação CSV/Excel/PDF, gráficos nem envio
+  agendado do relatório.
+
+3.7 DOCUMENTAÇÃO SWAGGER/OPENAPI
+- A API JSON de pedidos e o relatório não possuem documentação OpenAPI/Swagger.
+  Existe apenas a tabela de rotas no README.
+
+3.8 NOTIFICAÇÕES
+- Não há notificação por e-mail, SMS, WhatsApp automático ou push sobre
+  pedidos, estoque ou status.
+
+3.9 ALERTA E REPOSIÇÃO DE ESTOQUE
+- Não há alerta de estoque baixo, sugestão de reposição nem histórico de
+  movimentação de estoque.
+
+3.10 LOG DE AUDITORIA
+- Não há registro de quem criou, editou, cancelou ou excluiu cada registro.
+  Existem apenas logs de erro e requestId no servidor.
+
+3.11 BACKUP E RECUPERAÇÃO
+- Não há rotina automatizada de backup do banco nem plano de recuperação
+  documentado no repositório.
+
+3.12 CUPONS E DESCONTOS
+- Não há cupom, promoção, desconto, frete grátis condicional ou programa de
+  fidelidade.
+
+3.13 CADASTRO DE ENDEREÇOS
+- O endereço é informado por pedido. Não há livro de endereços, endereço
+  padrão nem múltiplos endereços por cliente.
+
+3.14 INTEGRAÇÃO FISCAL
+- Não há emissão de nota fiscal, integração com SEFAZ ou cálculo de impostos.
+
+3.15 PERMISSÕES GRANULARES
+- Existem apenas os papéis admin e user. Não há permissões por módulo, múltiplos
+  níveis de administrador nem delegação.
+
+3.16 LGPD
+- Não há fluxo de exportação de dados pessoais, exclusão de conta pelo titular
+  nem política de retenção implementada no sistema.
+
+3.17 PAGINAÇÃO/BUSCA NO CATÁLOGO
+- O catálogo do cliente não tem paginação, busca por nome, ordenação por preço
+  ou filtro por categoria/embalagem.
+
+3.18 BUSCA GLOBAL
+- Não há busca unificada por clientes, produtos, pedidos e usuários em uma só
+  tela.
+
+3.19 DEPLOY
+- Não há configuração de deploy pronta (Dockerfile, docker-compose, Procfile,
+  render.yaml, pipeline de publicação). O CI existe, mas o deploy não.
+
+3.20 TESTE DE CARGA E MONITORAMENTO
+- Não há testes de carga, métricas de aplicação, painel de monitoramento,
+  alertas de erro externos (Sentry etc.) nem verificação de disponibilidade
+  além de /health.
+
+3.21 INTERNACIONALIZAÇÃO
+- A interface é somente em português do Brasil. Não há suporte a outros
+  idiomas, moedas ou fusos.
+
+3.22 API PARA CLIENTES
+- A API JSON cobre pedidos e relatório. Não há API pública documentada para
+  catálogo, cadastro, clientes ou produtos.
+
+======================================================================
+4. PENDÊNCIAS OPERACIONAIS E DE SEGURANÇA
+======================================================================
+
+4.1 REPOSITÓRIO PÚBLICO
+- O repositório histórico já teve credencial exposta. A senha foi rotacionada,
+  mas recomenda-se tornar o repositório privado no GitHub. Essa ação depende do
+  dono do repositório.
+
+4.2 SENHA PADRÃO DO ADMIN
+- Em desenvolvimento o seed cria admin/admin123. Em qualquer ambiente fora de
+  desenvolvimento, a senha deve ser trocada ou definida por ADMIN_SENHA.
+
+4.3 VARIÁVEIS DE PRODUÇÃO
+- Ainda é necessário configurar NODE_ENV=production, SESSION_SECRET,
+  DATABASE_URL com sslmode=require e TRUST_PROXY quando houver proxy.
+
+4.4 MIGRATIONS NO DEPLOY
+- O pipeline de deploy precisa rodar "npm run migrate". Nunca usar sync().
+
+4.5 HOSPEDAGEM
+- A escolha de hospedagem (Render, Railway, VPS etc.) ainda não está definida
+  nem configurada no repositório.
+
+======================================================================
+5. O QUE FALTA PARA O SISTEMA ESTAR "COMPLETO"
+======================================================================
+
+Prioridade alta (impacto direto na operação da loja):
+1. Tela HTML de relatório de vendas com filtro por período e exportação.
+2. Recuperação/troca de senha e envio de e-mail transacional.
+3. Integração de pagamento (ao menos Pix) ou confirmação manual registrada.
+4. Cálculo de frete por região/CEP ou tabela de frete configurável.
+5. Deploy configurado com migrations automáticas e backup do banco.
+6. Documentação OpenAPI/Swagger da API JSON.
+
+Prioridade média (melhora a gestão):
+7. Busca e filtros adicionais em pedidos e produtos.
+8. Paginação e busca no catálogo do cliente.
+9. Log de auditoria das ações administrativas.
+10. Alerta de estoque baixo e histórico de movimentação.
+11. Notificações de mudança de status para o cliente.
+12. Livro de endereços por cliente.
+13. Cupons/descontos e promoções.
+
+Prioridade baixa (evolução):
+14. Emissão fiscal (NF-e).
+15. Permissões granulares e múltiplos níveis de admin.
+16. Fluxos de LGPD (exportação/exclusão de dados).
+17. Testes de carga, monitoramento e alertas externos.
+18. Auditoria de acessibilidade e internacionalização.
+
+======================================================================
+6. COMANDOS PARA REPRODUZIR A VERIFICAÇÃO
+======================================================================
+
+npm run lint         -> ESLint sem erros
+npm run lint:views   -> sintaxe dos templates EJS sem erros
+npm test             -> 274 testes aprovados, 0 falhas
+npm run migrate      -> aplica as migrations
+npm run seed         -> popula dados de demonstração
+npm start            -> sobe o servidor em http://localhost:3000
+
+Observação: os testes de integração precisam de PostgreSQL disponível e usam
+um banco separado definido em DB_NAME_TEST, criado pelo script pretest.
+
+======================================================================
+7. CONCLUSÃO
+======================================================================
+
+O sistema não está "incompleto" por bugs conhecidos: a suíte passa, o lint
+passa e os fluxos principais estão cobertos. Ele está incompleto em relação a
+recursos que uma loja costuma precisar para operar de ponta a ponta sem
+trabalho manual: pagamento, frete, e-mail, relatório visual, documentação de
+API, backup e deploy. O que já existe (cadastros, catálogo, carrinho, pedidos,
+estoque, permissões e segurança) está implementado e testado.

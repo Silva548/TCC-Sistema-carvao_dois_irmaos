@@ -1,0 +1,83 @@
+<%
+    // Campos de endereço do pedido, compartilhados entre o formulário de
+    // criação e o de edição (views/pedidos/_endereco.ejs).
+    //
+    // `endereco` é um objeto com as chaves já no formato do banco
+    // (endereco_cep, endereco_logradouro...) ou null. Veio de enderecoDe()
+    // (utils/endereco) na edição e do corpo reenviado quando o submit anterior
+    // foi recusado — por isso os dois caminhos, e não só o primeiro.
+    //
+    // Os campos NÃO são required no HTML: quem decide obrigatoriedade é o
+    // serviço, e só quando a modalidade é entrega. Marcar required aqui
+    // deixaria o navegador barrando o envio de um pedido de retirada antes de
+    // qualquer validação do servidor.
+    const end = (typeof endereco !== 'undefined' && endereco) ? endereco : {};
+    const valorEndereco = (campo) => {
+        if (submetido && submetido[`endereco_${campo}`] !== undefined) {
+            return submetido[`endereco_${campo}`];
+        }
+        return end[`endereco_${campo}`] || '';
+    };
+%>
+
+<h2 class="h5 mt-4">Endereço de entrega</h2>
+<p class="text-muted small">
+    Preencha quando a entrega for em domicílio. Para retirada, deixe em branco:
+    o cliente vem até a loja.
+</p>
+
+<div class="form-row">
+    <div class="form-group col-md-3">
+        <label for="endereco_cep">CEP</label>
+        <input type="text" class="form-control" id="endereco_cep" name="endereco_cep"
+            inputmode="numeric" maxlength="9" placeholder="88955-000"
+            autocomplete="postal-code"
+            value="<%= valorEndereco('cep') %>">
+        <%# O ViaCEP preenche logradouro, bairro, cidade e UF ao sair do campo
+            (public/js/endereco.js). Opcional de propósito: se a consulta falhar,
+            o resto é digitado à mão e o pedido funciona igual. %>
+        <small class="form-text text-muted">Preenchemos o resto pelo CEP.</small>
+    </div>
+
+    <div class="form-group col-md-6">
+        <label for="endereco_logradouro">Logradouro</label>
+        <input type="text" class="form-control" id="endereco_logradouro" name="endereco_logradouro"
+            maxlength="255" placeholder="Estrada Geral Palmeira"
+            value="<%= valorEndereco('logradouro') %>">
+    </div>
+
+    <div class="form-group col-md-3">
+        <label for="endereco_numero">Número</label>
+        <input type="text" class="form-control" id="endereco_numero" name="endereco_numero"
+            maxlength="20" value="<%= valorEndereco('numero') %>">
+    </div>
+</div>
+
+<div class="form-row">
+    <div class="form-group col-md-5">
+        <label for="endereco_complemento">Complemento</label>
+        <input type="text" class="form-control" id="endereco_complemento" name="endereco_complemento"
+            maxlength="255" placeholder="Apto, sala, referência..."
+            value="<%= valorEndereco('complemento') %>">
+    </div>
+
+    <div class="form-group col-md-4">
+        <label for="endereco_bairro">Bairro</label>
+        <input type="text" class="form-control" id="endereco_bairro" name="endereco_bairro"
+            maxlength="120" value="<%= valorEndereco('bairro') %>">
+    </div>
+
+    <div class="form-group col-md-3">
+        <label for="endereco_cidade">Cidade</label>
+        <input type="text" class="form-control" id="endereco_cidade" name="endereco_cidade"
+            maxlength="120" value="<%= valorEndereco('cidade') %>">
+    </div>
+</div>
+
+<div class="form-row">
+    <div class="form-group col-md-2">
+        <label for="endereco_uf">UF</label>
+        <input type="text" class="form-control text-uppercase" id="endereco_uf" name="endereco_uf"
+            maxlength="2" placeholder="SC" value="<%= valorEndereco('uf') %>">
+    </div>
+</div>

@@ -1,0 +1,163 @@
+<%
+    const { moeda, rotuloPagamento, rotuloTipoEntrega } = formatadores;
+    // Linhas do formulário. Ao reenviar com erro, as linhas que o usuário já
+    // preencheu voltam preenchidas e as extras ficam vazias.
+    const preenchidos = Array.isArray(itensPreenchidos) ? itensPreenchidos : [];
+    const escolhidos = (indice) => (preenchidos[indice] ? String(preenchidos[indice].produto_id) : '');
+    const quantidades = (indice) => (preenchidos[indice] ? String(preenchidos[indice].quantidade) : '');
+    // Para o user o cliente é o da própria conta: sem <select>, sem escolha.
+    const clienteDaConta = clienteFixo && clientes.length ? clientes[0] : null;
+    const semCliente = clienteFixo && !clientes.length;
+    // Admin sem nenhum cliente cadastrado também não consegue criar pedido.
+    const semClientes = !clienteFixo && !clientes.length;
+    // Contato pré-preenchido pelo cadastro do cliente; o valor digitado numa
+    // tentativa anterior tem prioridade ao reenviar com erro.
+    const contatoPadraoLocal = (typeof contatoPadrao !== 'undefined' && contatoPadrao) ? contatoPadrao : {};
+    const valorContato = (campo) => (submetido && submetido[campo] !== undefined
+        ? submetido[campo]
+        : (contatoPadraoLocal[campo] || ''));
+%>
+
+<h1>Novo pedido</h1>
+
+<% if (typeof erro !== 'undefined' && erro) { %>
+    <div class="alert alert-danger"><%= erro %></div>
+<% } %>
+
+<% if (semCliente || semClientes || !produtos.length) { %>
+    <div class="alert alert-warning">
+        <% if (semCliente) { %>
+            <div>Sua conta ainda não está vinculada a um cliente, então não é possível criar pedidos. Procure o administrador.</div>
+        <% } else if (semClientes) { %>
+            <div>Não há clientes cadastrados. <a href="/clientes/new">Cadastre um cliente</a> antes de criar o pedido.</div>
+        <% } %>
+        <% if (!produtos.length) { %>
+            <div>Não há produtos com estoque disponível. <a href="/produtos/new">Cadastre ou reponha um produto</a>.</div>
+        <% } %>
+    </div>
+<% } %>
+
+<form action="/pedidos" method="POST">
+    <%- include('../partials/csrf') %>
+
+    <div class="form-row">
+        <div class="form-group col-md-8">
+            <label for="cliente_id">Cliente</label>
+            <% if (clienteFixo) { %>
+                <%# O vínculo vem do cadastro do usuário (admin o define); o
+                    servidor ignora qualquer cliente_id enviado pelo cliente. %>
+                <input type="text" class="form-control" id="cliente_id" value="<%= clienteDaConta ? clienteDaConta.nome : 'Conta sem cliente vinculado' %>" disabled>
+            <% } else { %>
+                <select class="form-control" id="cliente_id" name="cliente_id" required>
+                    <option value="">Selecione um cliente</option>
+                    <% clientes.forEach(cliente => { %>
+                        <option value="<%= cliente.id %>" <%= String(submetido && submetido.cliente_id) === String(cliente.id) ? 'selected' : '' %>><%= cliente.nome %></option>
+                    <% }) %>
+                </select>
+            <% } %>
+        </div>
+
+        <div class="form-group col-md-4">
+            <label for="forma_pagamento">Forma de pagamento</label>
+            <select class="form-control" id="forma_pagamento" name="forma_pagamento" required>
+                <option value="">Selecione</option>
+                <% formasPagamento.forEach(forma => { %>
+                    <option value="<%= forma %>" <%= String(submetido && submetido.forma_pagamento) === forma ? 'selected' : '' %>><%= rotuloPagamento(forma) %></option>
+                <% }) %>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group col-md-4">
+            <label for="tipo_entrega">Entrega ou retirada</label>
+            <%# Decide qual preço do produto entra no total: entrega no endereço
+                do cliente, ou retirada na empresa. %>
+            <select class="form-control" id="tipo_entrega" name="tipo_entrega" required>
+                <% const tipoAtual = String(submetido && submetido.tipo_entrega ? submetido.tipo_entrega : 'entrega'); %>
+                <% tiposEntrega.forEach(tipo => { %>
+                    <option value="<%= tipo %>" <%= tipoAtual === tipo ? 'selected' : '' %>><%= rotuloTipoEntrega(tipo) %></option>
+                <% }) %>
+            </select>
+            <small class="form-text text-muted">Preços diferentes para entrega e retirada.</small>
+        </div>
+    </div>
+
+    <% if (clienteFixo) { %>
+        <h2 class="h5 mt-4">Contato para o pedido</h2>
+        <p class="text-muted small">
+            Estes dados acompanham o pedido para a loja falar com você.
+            Você pode atualizá-los em <a href="/meus-dados">Meus dados</a>.
+        </p>
+        <div class="form-row">
+            <div class="form-group col-md-5">
+                <label for="contato_nome">Nome</label>
+                <input type="text" class="form-control" id="contato_nome" name="contato_nome"
+                    maxlength="255" required value="<%= valorContato('contato_nome') %>">
+            </div>
+            <div class="form-group col-md-4">
+                <label for="contato_email">E-mail</label>
+                <input type="email" class="form-control" id="contato_email" name="contato_email"
+                    maxlength="255" required value="<%= valorContato('contato_email') %>">
+            </div>
+            <div class="form-group col-md-3">
+                <label for="contato_telefone">WhatsApp</label>
+                <input type="tel" class="form-control" id="contato_telefone" name="contato_telefone"
+                    maxlength="20" required value="<%= valorContato('contato_telefone') %>">
+            </div>
+        </div>
+    <% } %>
+
+    <%- include('_endereco', { endereco: null }) %>
+
+    <h2 class="h5 mt-4">Itens</h2>
+    <p class="text-muted small">
+        Preencha produto e quantidade na mesma linha. Linhas em branco são
+        ignoradas. <%= linhasItem %> linhas disponíveis.
+    </p>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Produto</th>
+                    <th style="width: 140px;">Quantidade</th>
+                    <th>Preço unitário</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% for (let i = 0; i < linhasItem; i++) { %>
+                    <tr>
+                        <td>
+                            <select class="form-control form-control-sm" name="item_produto_id[]" aria-label="Produto da linha <%= i + 1 %>">
+                                <option value="">—</option>
+                                <% produtos.forEach(produto => { %>
+                                    <option value="<%= produto.id %>" <%= escolhidos(i) === String(produto.id) ? 'selected' : '' %>>
+                                        <%= produto.nome %> — entrega <%= moeda(produto.preco_entrega) %> / retirada <%= moeda(produto.preco_retirada) %> (estoque <%= produto.estoque %>)
+                                    </option>
+                                <% }) %>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="number" min="1" step="1" class="form-control form-control-sm"
+                                name="item_quantidade[]" value="<%= quantidades(i) %>"
+                                aria-label="Quantidade da linha <%= i + 1 %>">
+                        </td>
+                        <td class="text-muted small align-middle">
+                            <% if (preenchidos[i]) { %>
+                                O total é calculado no servidor, a partir do preço atual do produto.
+                            <% } else { %>
+                                &nbsp;
+                            <% } %>
+                        </td>
+                    </tr>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+
+    <button type="submit" class="btn btn-primary" <%= (!clientes.length || !produtos.length) ? 'disabled' : '' %>>
+        Criar pedido
+    </button>
+    <a href="/pedidos" class="btn btn-link">Cancelar</a>
+</form>

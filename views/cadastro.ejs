@@ -1,0 +1,78 @@
+<%# Cadastro de conta do cliente comum.
+
+    Só cria papel "user" — o campo role nem aparece no formulário, e o
+    controller ignora qualquer role que venha no corpo (ver authController.cadastro).
+    Contas de admin continuam vindo do seed.
+
+    `valor` relê do `submetido` quando o POST foi recusado, para o cliente não
+    digitar tudo de novo por causa de um CPF inválido. A senha nunca volta
+    (vem undefined). %>
+<div class="cartao-form">
+    <img src="<%= empresa.logo %>" alt="Logomarca <%= empresa.nome %>" class="logo logo-form">
+    <h1>Criar conta</h1>
+
+    <% if (erro) { %>
+        <div class="alert alert-danger"><%= erro %></div>
+    <% } %>
+
+    <form action="/registrar" method="POST" novalidate>
+        <%- include('partials/csrf') %>
+
+        <div class="form-group">
+            <label for="username">Nome de usuário</label>
+            <input type="text" class="form-control" id="username" name="username" required autofocus
+                autocomplete="username" maxlength="100"
+                value="<%= submetido && submetido.username ? submetido.username : '' %>">
+            <small class="form-text text-muted">É com este nome que você entra no sistema.</small>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Senha</label>
+            <input type="password" class="form-control" id="password" name="password" required
+                autocomplete="new-password" minlength="8">
+            <small class="form-text text-muted">No mínimo 8 caracteres.</small>
+        </div>
+
+        <hr class="my-4">
+
+        <p class="text-muted small mb-3">
+            Estes dados acompanham o seu pedido (nome, e-mail e WhatsApp). Depois
+            dá para alterá-los em <strong>Meus dados</strong>.
+        </p>
+
+        <div class="form-group">
+            <label for="nome">Nome completo</label>
+            <input type="text" class="form-control" id="nome" name="nome" required
+                autocomplete="name" maxlength="255"
+                value="<%= submetido && submetido.nome ? submetido.nome : '' %>">
+        </div>
+
+        <div class="form-group">
+            <label for="email">E-mail</label>
+            <input type="email" class="form-control" id="email" name="email" required
+                autocomplete="email" maxlength="255"
+                value="<%= submetido && submetido.email ? submetido.email : '' %>">
+        </div>
+
+        <div class="form-group">
+            <label for="documento">CPF ou CNPJ</label>
+            <input type="text" class="form-control" id="documento" name="documento" required
+                inputmode="numeric" maxlength="20" placeholder="Somente números"
+                value="<%= submetido && submetido.documento ? submetido.documento : '' %>">
+            <small class="form-text text-muted">Serve para identificar seu pedido.</small>
+        </div>
+
+        <div class="form-group">
+            <label for="telefone">WhatsApp</label>
+            <input type="tel" class="form-control" id="telefone" name="telefone" required
+                autocomplete="tel" maxlength="20" placeholder="(11) 90000-0000"
+                value="<%= submetido && submetido.telefone ? submetido.telefone : '' %>">
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Criar conta</button>
+
+        <p class="text-center mt-3 mb-0">
+            Já tem conta? <a href="/login">Entrar</a>
+        </p>
+    </form>
+</div>

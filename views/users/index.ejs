@@ -1,0 +1,41 @@
+<h1>Lista de usuários</h1>
+
+<%# Mensagem de erro trazida pelo controller após uma recusa (ex.: exclusão da
+    própria conta ou do único admin). Vem na query porque o app não usa flash. %>
+<% if (typeof erro !== 'undefined' && erro) { %>
+    <div class="alert alert-danger"><%= erro %></div>
+<% } %>
+
+<a href="/users/new" class="btn btn-success mb-3">Novo Usuário</a>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Usuário</th>
+            <th>Perfil</th>
+            <th>Cliente vinculado</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody id="userTableBody">
+        <% users.forEach(user => { %>
+            <tr>
+                <td><%= user.id %></td>
+                <td><%= user.username %></td>
+                <td><%= user.role %></td>
+                <td><%= user.Cliente ? user.Cliente.nome : '—' %></td>
+                <td>
+                    <a href="/users/<%= user.id %>" class="btn btn-primary">View</a>
+                    <a href="/users/<%= user.id %>/edit" class="btn btn-warning">Edit</a>
+                    <form action="/users/<%= user.id %>?_method=DELETE" method="POST" style="display: inline;">
+                        <%- include('../partials/csrf') %>
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        <% }) %>
+    </tbody>
+</table>
+
+<%- include("../partials/pagination", { caminhoBase: "/users" }) %>

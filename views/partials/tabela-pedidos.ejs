@@ -1,0 +1,43 @@
+<%
+    // Tabela de pedidos reutilizada pela listagem de /pedidos e pela aba
+    // "Meus pedidos" da home do cliente. Espera `pedidos` e `ehAdmin` no
+    // escopo (passados no include).
+    const { moeda, dataHora, rotuloStatus, rotuloPagamento, rotuloTipoEntrega, classeStatus } = formatadores;
+    const mostrarCliente = typeof ehAdmin !== 'undefined' && ehAdmin;
+%>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Data</th>
+                <% if (mostrarCliente) { %><th>Cliente</th><% } %>
+                <th>Pagamento</th>
+                <th>Entrega</th>
+                <th class="text-right">Total</th>
+                <th>Status</th>
+                <th class="text-right">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% pedidos.forEach(pedido => { %>
+                <tr>
+                    <td><%= pedido.id %></td>
+                    <td><%= dataHora(pedido.data) %></td>
+                    <% if (mostrarCliente) { %><td><%= pedido.Cliente ? pedido.Cliente.nome : '-' %></td><% } %>
+                    <td><%= rotuloPagamento(pedido.forma_pagamento) %></td>
+                    <td><%= rotuloTipoEntrega(pedido.tipo_entrega) %></td>
+                    <td class="text-right"><%= moeda(pedido.valor_total) %></td>
+                    <td>
+                        <span class="badge <%= classeStatus(pedido.status) %>">
+                            <%= rotuloStatus(pedido.status) %>
+                        </span>
+                    </td>
+                    <td class="text-right">
+                        <a href="/pedidos/<%= pedido.id %>" class="btn btn-sm btn-outline-primary">Ver</a>
+                    </td>
+                </tr>
+            <% }) %>
+        </tbody>
+    </table>
+</div>

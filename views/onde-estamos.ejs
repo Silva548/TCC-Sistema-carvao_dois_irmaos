@@ -1,0 +1,88 @@
+<div class="jumbotron text-center">
+    <img src="<%= empresa.logo %>" alt="Logomarca <%= empresa.nome %>" class="logo logo-home">
+    <h1>Onde estamos</h1>
+    <p class="lead"><%= empresa.slogan %></p>
+</div>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card mb-3">
+            <div class="card-header">Endereço</div>
+            <div class="card-body">
+                <address class="mb-3">
+                    <strong><%= empresa.nome %></strong><br>
+                    <%= empresa.endereco.logradouro %><br>
+                    <%= empresa.endereco.complemento %><br>
+                    <%= empresa.endereco.cidade %> - <%= empresa.endereco.uf %><br>
+                    CEP: <%= empresa.endereco.cep %>
+                </address>
+
+                <%# Link de mapa em vez de embed. Um iframe do Google Maps
+                    puxaria script de terceiro, exigiria chave de API
+                    (com fatura) e acrescentaria origens à CSP, para exibir um
+                    mapa que o app do celular do cliente abre melhor. %>
+                <a href="<%= empresa.mapaUrl %>" class="btn btn-primary" target="_blank"
+                    rel="noopener noreferrer">Abrir no Google Maps</a>
+
+                <a href="<%= whatsappUrl('Olá! Gostaria de confirmar o horário de funcionamento.') %>"
+                    class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">
+                    Falar no WhatsApp
+                </a>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">Contato</div>
+            <div class="card-body">
+                <p class="mb-1">
+                    <strong>Telefone / WhatsApp:</strong>
+                    <a href="tel:+<%= empresa.contato.telefoneLink %>" class="rodape-link">
+                        <%= empresa.contato.telefone %>
+                    </a>
+                </p>
+                <p class="mb-0">
+                    <strong>E-mail:</strong>
+                    <a href="mailto:<%= empresa.contato.email %>" class="rodape-link">
+                        <%= empresa.contato.email %>
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card mb-3">
+            <div class="card-header">Horário de funcionamento</div>
+            <div class="card-body">
+                <%# A tabela vem de config/empresa já com o texto pronto, para o
+                    mesmo horário não ser escrito de dois jeitos no EJS e no
+                    rodapé divergirem sem ninguém perceber. %>
+                <ul class="spec-lista">
+                    <% empresa.horario.forEach(function (faixa) { %>
+                        <li>
+                            <span class="spec-rotulo"><%= faixa.dias %></span>
+                            <span class="spec-valor">
+                                <% if (!faixa.aberto) { %>
+                                    <span class="text-muted">Fechado</span>
+                                <% } else { %>
+                                    <%= faixa.horas %>
+                                <% } %>
+                            </span>
+                        </li>
+                    <% }); %>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Como chegar</div>
+            <div class="card-body">
+                <p class="mb-0">
+                    A loja fica no interior de Balneário Gaivota, em Balneário
+                    Gaivota - SC. Toque no botão acima para abrir o trajeto no
+                    aplicativo de mapas do celular.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

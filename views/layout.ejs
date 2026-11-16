@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <%# `typeof` e não só `title`: no EJS a referência a uma variável que o
+        controller não passou estoura ReferenceError e derruba a página. Nenhuma
+        tela passa título hoje, então o guard é obrigatório, não defensivo. %>
+    <title><%= typeof title === 'undefined' || !title ? empresa.nomeCurto : title + ' | ' + empresa.nomeCurto %></title>
+    <%# A logomarca também é o favicon. O arquivo é servido same-origin
+        (public/img), então a CSP imgSrc 'self' já cobre. %>
+    <link rel="icon" type="image/jpeg" href="<%= empresa.logo %>">
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/css/bootstrap.min.css"
+        integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z"
+        crossorigin="anonymous">
+    <%# Tema próprio (vermelho + amarelo). Servido same-origin, coberto por
+        styleSrc 'self' na CSP; por isso não aparece na lista de SRI. %>
+    <link rel="stylesheet" href="/css/estilo.css">
+    <%# Sem defer, de propósito: bloqueia a renderização e aplica o tema salvo
+        antes de a página pintar, evitando o piscar no tema errado. Externo e
+        same-origin porque a CSP (scriptSrc 'self') não permite script inline. %>
+    <script src="/js/tema.js"></script>
+</head>
+<body>
+    <div class="container">
+        <%- include('partials/navbar') %>
+        <%- body %>
+
+        <%- include('partials/rodape') %>
+    </div>
+
+    <%# Botão de tema fora do .container: ele é fixed e, se ficasse dentro, a
+        largura máxima da page travaria o "canto da tela" em telas largas. %>
+    <button type="button" class="alternar-tema" data-alternar-tema
+        aria-label="Alternar entre tema claro e escuro" title="Alternar tema">
+        <svg class="icone-sol" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+        </svg>
+        <svg class="icone-lua" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"></path>
+        </svg>
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.slim.min.js"
+        integrity="sha384-5AkRS45j4ukf+JbWAfHL8P4onPA9p0KwwP7pUdjSQA3ss9edbJUJc/XcYAiheSSz"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"
+        integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.min.js"
+        integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV"
+        crossorigin="anonymous"></script>
+    <%# O carrinho só é carregado na home do cliente comum (a flag vem do
+        homeController). Sem a flag a página não paga o custo do script. %>
+    <% if (typeof carrinho !== 'undefined' && carrinho) { %>
+        <script src="/js/carrinho.js" defer></script>
+    <% } %>
+    <%# O preenchimento por CEP vai no layout inteiro, e não nas duas telas que
+        têm o campo: ele é pequeno, faz uma consulta só quando existe
+        #endereco_cep na página, e assim a tela de erro 404 não precisa de um
+        include condicional só para não carregar o script. %>
+    <script src="/js/endereco.js" defer></script>
+</body>
+</html>
